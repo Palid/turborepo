@@ -1,0 +1,61 @@
+name: Build Patched Release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v2.6.4-patched-1)'
+        required: true
+        default: 'v2.6.4-patched-1'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            name: turbo-linux-x64
+            setup: sudo apt-get update && sudo apt-get install -y musl-tools
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            name: turbo-darwin-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: ${{ matrix.target }}
+          rustflags: ""
+      - name: Setup
+        if: matrix.setup
+        run: ${{ matrix.setup }}
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }} -p turbo
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: target/${{ matrix.target }}/release/turbo
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+      - name: Prepare binaries
+        run: |
+          chmod +x turbo-linux-x64/turbo turbo-darwin-arm64/turbo
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ inputs.version }}
+          name: "${{ inputs.version }}: Bun lockfile fix"
+          body: |
+            Fixes GitHub/git package format corruption in `turbo prune`.
+
+            See PR: https://github.com/vercel/turborepo/pull/11268
+          files: |
+            turbo-linux-x64/turbo
+            turbo-darwin-arm64/turbo
