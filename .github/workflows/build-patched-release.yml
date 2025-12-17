@@ -47,7 +47,11 @@ jobs:
       - uses: actions/download-artifact@v4
       - name: Prepare binaries
         run: |
-          chmod +x turbo-linux-x64/turbo turbo-darwin-arm64/turbo
+          mkdir -p release
+          mv turbo-linux-x64/turbo release/turbo-linux-x64
+          mv turbo-darwin-arm64/turbo release/turbo-darwin-arm64
+          chmod +x release/turbo-linux-x64 release/turbo-darwin-arm64
+          ls -la release/
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -58,5 +62,5 @@ jobs:
 
             See PR: https://github.com/vercel/turborepo/pull/11268
           files: |
-            turbo-linux-x64/turbo
-            turbo-darwin-arm64/turbo
+            release/turbo-linux-x64
+            release/turbo-darwin-arm64
